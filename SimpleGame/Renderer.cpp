@@ -19,12 +19,17 @@ void Renderer::Initialize(int windowSizeX, int windowSizeY)
 
 	//Load shaders
 	m_SolidRectShader = CompileShaders("./Shaders/SolidRect.vs", "./Shaders/SolidRect.fs");
-	m_TriangleShader = CompileShaders("./Shaders/SolidRect.vs", "./Shaders/SolidRect.fs");
+	m_TriangleShader = CompileShaders("./Shaders/Triangle.vs", "./Shaders/Triangle.fs");
 	
 	//Create VBOs
 	CreateVertexBufferObjects();
 
 	if (m_SolidRectShader > 0 && m_VBORect > 0)
+	{
+		m_Initialized = true;
+	}
+	
+	if (m_TriangleShader > 0 && m_VBOTriangle > 0)
 	{
 		m_Initialized = true;
 	}
@@ -48,16 +53,36 @@ void Renderer::CreateVertexBufferObjects()
 	glBindBuffer(GL_ARRAY_BUFFER, m_VBORect);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(rect), rect, GL_STATIC_DRAW);
 	
+	float centerX = 0;
+	float centerY = 0;
+	float size = 0.1;
+	
 	float triangle[]
 		=
 	{
+		centerX - size/2 , centerY - size/2, 0,
+		centerX + size/2, centerY - size/2, 0,
+		centerX + size/2, centerY + size/2, 0,
+		
+		centerX - size/2, centerY - size/2, 0,
+		centerX + size/2, centerY + size/2, 0,
+		centerX - size/2, centerY + size/2, 0
+		
+		/*
 		0, 0, 0,
 		1, 0, 0,
-		1, 1, 0
+		1, 1, 0,	// triangle 1
+		
+		0, 0, 0,
+		1, 1, 0,
+		0, 1, 0		// trianlge 2
+		*/
 	};
 	glGenBuffers(1, &m_VBOTriangle);
 	glBindBuffer(GL_ARRAY_BUFFER, m_VBOTriangle);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(triangle), triangle, GL_STATIC_DRAW);
+	
+	
 }
 
 void Renderer::AddShader(GLuint ShaderProgram, const char* pShaderText, GLenum ShaderType)
@@ -193,22 +218,26 @@ void Renderer::DrawSolidRect(float x, float y, float z, float size, float r, flo
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
+float g_time = 0.0f;
 
 void Renderer::DrawTriangle()
 {
+	g_time += 0.0001f;
 	//Program select
-	glUseProgram(m_SolidRectShader);
+	glUseProgram(m_TriangleShader);
 
-	// u_Trans: (x, y, 0, scale) - 위치 0,0 / 스케일 1로 설정
-	glUniform4f(glGetUniformLocation(m_SolidRectShader, "u_Trans"), 0, 0, 0, 1);
+	int uTime = glGetUniformLocation(m_TriangleShader, "u_Time");
+	glUniform1f(uTime, g_time);
 
-	int attribPosition = glGetAttribLocation(m_SolidRectShader, "a_Position");
+	glUniform4f(glGetUniformLocation(m_TriangleShader, "u_Color"), 1, 1, 1, 1);
+	
+	int attribPosition = glGetAttribLocation(m_TriangleShader, "a_Position");
 	glEnableVertexAttribArray(attribPosition);
 	
 	glBindBuffer(GL_ARRAY_BUFFER, m_VBOTriangle);
 	glVertexAttribPointer(attribPosition, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, 0);
 
-	glDrawArrays(GL_TRIANGLES, 0, 3); // 삼각형은 vertex 3개
+	glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
 void Renderer::GetGLPosition(float x, float y, float *newX, float *newY)
